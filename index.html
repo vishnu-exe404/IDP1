@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MitraIDE</title>
+  <link href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- Loader -->
+  <div id="loader">
+    <div style="font-size: 28px; font-weight: bold; margin-bottom: 20px;">MitraIDE</div>
+    <div
+      style="width: 40px; height: 40px; border: 3px solid rgba(0, 122, 204, 0.2); border-top-color: #007acc; border-radius: 50%; animation: spin 1s linear infinite;">
+    </div>
+    <style>
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </div>
+
+  <!-- Camera Modal -->
+  <div id="cam-modal" class="hidden">
+    <div class="cam-modal-box">
+      <i class="codicon codicon-device-camera-video"
+        style="font-size: 48px; color: var(--vscode-accent); margin-bottom: 20px; display: block;"></i>
+      <h2 style="color: var(--vscode-text-active); margin-bottom: 15px;">Enable Emotion AI</h2>
+      <p style="margin-bottom: 20px; line-height: 1.6; font-size: 13px; color: var(--vscode-text);">MitraIDE uses your
+        camera locally to detect when you are frustrated or focused, providing context-aware coding assistance in real
+        time.</p>
+      <div>
+        <button class="cam-allow" onclick="startCamera()">Allow Access</button>
+        <button class="cam-deny" onclick="denyCamera()">Skip</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="vscode-layout">
+    <!-- TITLEBAR -->
+    <div id="titlebar">
+      <div class="tb-menu">
+        <span>File</span><span>Edit</span><span>Selection</span><span>View</span><span>Go</span><span>Run</span><span>Terminal</span><span>Help</span>
+      </div>
+
+      <div class="tb-search">
+        <div class="search-input-wrapper">
+          <i class="codicon codicon-search"></i>
+          <input type="text" placeholder="MitraIDE">
+        </div>
+      </div>
+
+      <div class="tb-actions">
+        <button class="tb-btn" onclick="toggleTheme()" title="Toggle Theme"><i
+            class="codicon codicon-color-mode"></i></button>
+        <button class="tb-btn" onclick="toggleVoice()" id="voice-btn" title="Toggle Voice"><i
+            class="codicon codicon-unmute"></i></button>
+        <button class="tb-btn" onclick="saveCode()" title="Save"><i class="codicon codicon-save"></i></button>
+        <button class="tb-btn" onclick="analyzeCode()" style="color: var(--success);" title="Run Analysis"><i
+            class="codicon codicon-play"></i></button>
+      </div>
+    </div>
+
+    <div id="main-area">
+      <!-- ACTIVITY BAR -->
+      <div id="activity-bar">
+        <div class="ab-icon active" title="Explorer" onclick="toggleSidebar()"><i class="codicon codicon-files"></i>
+        </div>
+        <div class="ab-icon" title="Emotion Tracker"><i class="codicon codicon-eye"></i></div>
+        <div class="ab-icon" title="Source Control"><i class="codicon codicon-source-control"></i></div>
+        <div class="ab-spacer"></div>
+        <div class="ab-icon" title="Settings"><i class="codicon codicon-settings-gear"></i></div>
+      </div>
+
+      <!-- SIDEBAR -->
+      <div id="sidebar">
+        <div class="sb-header">
+          EXPLORER
+          <div style="display: flex; gap: 4px; margin-left: auto;">
+            <button onclick="createNewFile()" class="sb-action-btn" title="New File">📄</button>
+            <button onclick="createNewFolder()" class="sb-action-btn" title="New Folder">📁</button>
+          </div>
+        </div>
+
+        <div id="file-explorer" class="sb-section"></div>
+
+        <div class="sb-section" style="margin-top: 20px;">
+          <div class="sb-section-title"><i class="codicon codicon-chevron-down"></i> AI CAMERA</div>
+          <div class="sb-content">
+            <div id="camera-module">
+              <video id="cam-video" autoplay muted playsinline></video>
+              <canvas id="cam-canvas"></canvas>
+              <div class="cam-status">
+                <div class="cam-dot" id="cam-dot"></div>
+                <div>
+                  <div class="cam-emotion-name" id="cam-emotion-name">No camera</div>
+                  <div class="cam-confidence" id="cam-confidence" style="font-size: 9px; opacity: 0.8;">Click Allow
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="cam-actions" style="display:flex; gap: 6px; margin-top: 10px; margin-bottom: 10px;">
+              <button onclick="startCamera()" class="tb-btn"
+                style="flex:1; background: rgba(255,255,255,0.05); color: var(--vscode-text-active); font-size: 11px;"
+                title="Start Camera"><i class="codicon codicon-play"></i> Start</button>
+              <button onclick="capturePhoto()" class="tb-btn"
+                style="flex:1; background: rgba(0, 240, 255, 0.15); color: var(--vscode-accent); font-size: 11px;"
+                title="Capture Photo"><i class="codicon codicon-device-camera"></i> Capture</button>
+              <button onclick="stopCamera()" class="tb-btn"
+                style="flex:1; background: rgba(255, 85, 85, 0.15); color: var(--danger); font-size: 11px;"
+                title="Stop Camera"><i class="codicon codicon-debug-stop"></i> Stop</button>
+            </div>
+
+            <div class="emotion-bars" id="emotion-bars">
+              <div class="ebar"><span class="ebar-label">Happy</span>
+                <div class="ebar-track">
+                  <div class="ebar-fill" id="eb-happy" style="width:0%;background:var(--success);"></div>
+                </div><span class="ebar-pct" id="ep-happy">0%</span>
+              </div>
+              <div class="ebar"><span class="ebar-label">Sad</span>
+                <div class="ebar-track">
+                  <div class="ebar-fill" id="eb-sad" style="width:0%;background:#007acc;"></div>
+                </div><span class="ebar-pct" id="ep-sad">0%</span>
+              </div>
+              <div class="ebar"><span class="ebar-label">Frustrated</span>
+                <div class="ebar-track">
+                  <div class="ebar-fill" id="eb-frustrated" style="width:0%;background:var(--danger);"></div>
+                </div><span class="ebar-pct" id="ep-frustrated">0%</span>
+              </div>
+              <div class="ebar"><span class="ebar-label">Focused</span>
+                <div class="ebar-track">
+                  <div class="ebar-fill" id="eb-focused" style="width:0%;background:var(--warn);"></div>
+                </div><span class="ebar-pct" id="ep-focused">0%</span>
+              </div>
+              <div class="ebar"><span class="ebar-label">Neutral</span>
+                <div class="ebar-track">
+                  <div class="ebar-fill" id="eb-neutral" style="width:0%;background:#a1a1aa;"></div>
+                </div><span class="ebar-pct" id="ep-neutral">0%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sb-section">
+          <div class="sb-section-title"><i class="codicon codicon-chevron-down"></i> MOOD & PROGRESS</div>
+          <div class="sb-content">
+            <div class="mood-gauge">
+              <div class="mood-arc-wrap">
+                <canvas id="mood-canvas" width="110" height="60"></canvas>
+                <div class="mood-num" id="mood-num">85</div>
+              </div>
+              <div class="mood-tag" id="mood-tag" style="color:var(--vscode-accent)">Feeling Great!</div>
+            </div>
+
+            <div class="prog-item">
+              <div class="prog-header"><span>Focus Level</span><span id="pct-focus">85%</span></div>
+              <div class="prog-track">
+                <div class="prog-bar" id="bar-focus" style="width:85%;background:var(--vscode-accent);"></div>
+              </div>
+            </div>
+            <div class="prog-item">
+              <div class="prog-header"><span>Code Progress</span><span id="pct-prog">0%</span></div>
+              <div class="prog-track">
+                <div class="prog-bar" id="bar-prog" style="width:0%;background:var(--success);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sb-section">
+          <div class="sb-section-title"><i class="codicon codicon-chevron-down"></i> SESSION STATS</div>
+          <div class="sb-content">
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div style="font-size:18px;font-weight:bold;color:var(--vscode-text-active)" id="s-fixed">0</div>
+                <div style="font-size:10px;opacity:0.8">Errors Fixed</div>
+              </div>
+              <div class="stat-card">
+                <div style="font-size:18px;font-weight:bold;color:var(--vscode-text-active)" id="s-lines">0</div>
+                <div style="font-size:10px;opacity:0.8">Lines</div>
+              </div>
+            </div>
+            <div id="smart-tip"
+              style="margin-top:10px;padding:10px;background:rgba(0,122,204,0.1);border-left:2px solid var(--vscode-accent);font-size:11px;">
+              💡 Tip: Start small. Building premium code takes time!</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- EDITOR AREA -->
+      <div id="editor-area">
+        <div class="file-tabs" id="file-tabs" style="display: none;">
+          <div class="file-tab active lt" data-lang="javascript">
+            <i class="codicon codicon-symbol-file" style="color: #ecc024;"></i> main.js <i
+              class="codicon codicon-close close"></i>
+          </div>
+          <div class="file-tab lt" data-lang="python">
+            <i class="codicon codicon-symbol-file" style="color: #3572A5;"></i> main.py <i
+              class="codicon codicon-close close"></i>
+          </div>
+          <div class="file-tab lt" data-lang="html">
+            <i class="codicon codicon-symbol-file" style="color: #e34c26;"></i> index.html <i
+              class="codicon codicon-close close"></i>
+          </div>
+        </div>
+
+        <div class="breadcrumbs">
+          MitraIDE <span class="bc-sep"><i class="codicon codicon-chevron-right"></i></span> src <span class="bc-sep"><i
+              class="codicon codicon-chevron-right"></i></span> <span id="bc-filename"
+            style="color:var(--vscode-text-active)">main.js</span>
+        </div>
+
+        <!-- CUSTOM FILE TABS -->
+        <div id="custom-file-tabs" class="custom-file-tabs">
+          <div class="tab-placeholder">No files open</div>
+        </div>
+
+        <div id="frust-banner">
+          <i class="codicon codicon-warning" style="font-size: 24px; color: var(--warn);"></i>
+          <div><b style="color:var(--vscode-text-active)">Hang in there!</b> <span class="fb-text">You've hit the same
+              issue a few times.</span></div>
+          <button onclick="document.getElementById('frust-banner').classList.remove('show')"
+            style="margin-left:auto; background:transparent; border:none; color:inherit; cursor:pointer;"><i
+              class="codicon codicon-close"></i></button>
+        </div>
+
+        <div id="editor-wrapper">
+          <div id="typing-light"></div>
+          <div class="line-nums" id="line-nums">1</div>
+          <textarea id="code-editor" spellcheck="false" placeholder="// Start typing your premium code..."></textarea>
+        </div>
+
+        <!-- BOTTOM PANEL -->
+        <div id="bottom-area">
+          <div class="panel-tabs">
+            <div class="ptab active" onclick="switchPanel('output')">OUTPUT</div>
+            <div class="ptab" onclick="switchPanel('feedback')">AI FEEDBACK</div>
+            <div class="ptab" onclick="switchPanel('emotion')">EMOTION FEED</div>
+            <div style="flex:1"></div>
+            <div class="panel-actions">
+              <div class="ptab" onclick="clearActivePanel()" title="Clear Panel"><i class="codicon codicon-trash"></i>
+              </div>
+              <div class="ptab" onclick="document.getElementById('bottom-area').style.display='none'"
+                title="Close Panel"><i class="codicon codicon-close"></i></div>
+            </div>
+          </div>
+          <div class="panel-content-wrap">
+            <div id="output-panel" class="panel-view active">
+              <div id="output-log">
+                <div class="ll"><span class="ll-p">›</span><span class="ll-t ll-info">MitraIDE initialized.</span></div>
+              </div>
+            </div>
+            <div id="feedback-panel" class="panel-view">
+              <div id="feedback-log">
+                <div class="fb-card">
+                  <div class="fb-title"><i class="codicon codicon-sparkle" style="color:var(--success)"></i> Hello,
+                    Developer!</div>
+                  <div class="fb-body">This is your premium coding environment. Let's build something amazing today.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="emotion-panel" class="panel-view">
+              <div id="emotion-feed">
+                <div class="emo-feed-card">
+                  <div style="font-size: 24px;">🤖</div>
+                  <div>
+                    <div style="font-weight:600; color:var(--vscode-text-active); font-size: 12px;">Waiting for
+                      camera...</div>
+                    <div style="font-size:11px; margin-top: 2px;">Allow camera access for real-time support.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATUS BAR -->
+    <div id="statusbar">
+      <div class="s-item" id="sb-branch"><i class="codicon codicon-git-branch"></i> main</div>
+      <div class="s-item" id="sb-errors"
+        onclick="document.getElementById('bottom-area').style.display='flex'; switchPanel('output');"><i
+          class="codicon codicon-error"></i> 0</div>
+      <div class="s-item" id="sb-cam"><i class="codicon codicon-device-camera-video"></i> Off</div>
+      <div style="flex:1"></div>
+      <div class="s-item" id="sb-cursor">Ln 1, Col 1</div>
+      <div class="s-item">Spaces: 2</div>
+      <div class="s-item">UTF-8</div>
+      <div class="s-item" id="sb-lang"><i class="codicon codicon-symbol-file"></i> JavaScript</div>
+      <div class="s-item" id="sb-mood" title="Emotion AI Active"><i class="codicon codicon-smiley"></i> 85</div>
+      <div class="s-item" id="sb-voice"><i class="codicon codicon-unmute"></i> Voice Off</div>
+    </div>
+
+    <div id="ai-thinking" style="display:none"></div>
+  </div>
+
+  <!-- Toast & Overlays -->
+  <div class="toast" id="toast"></div>
+  <div id="emotion-badge" style="display:none"><span class="e-face"></span><span id="eb-emotion"></span></div>
+
+  <span id="s-time" style="display:none">0m</span>
+  <span id="bar-conf" style="display:none"></span>
+  <span id="pct-conf" style="display:none"></span>
+  <span id="s-repeat" style="display:none"></span>
+
+  <!-- Photo Viewer Modal -->
+  <div id="photo-modal" class="hidden">
+    <div class="photo-modal-box">
+      <h2 style="color: var(--vscode-text-active); margin-bottom: 15px; font-size: 16px;">Captured Photo</h2>
+      <div class="photo-container">
+        <img id="captured-photo" src="" alt="Captured">
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px;">
+        <button class="cam-deny" onclick="closePhotoModal()">Close</button>
+        <button class="cam-allow" onclick="downloadPhoto()"><i class="codicon codicon-desktop-download"></i> Save
+          Image</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
